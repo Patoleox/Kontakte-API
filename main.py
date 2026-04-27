@@ -2,13 +2,17 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import sqlite3
 
+def init_db():
+    conn = sqlite3.connect("kontakte.sqlite")
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS Kontakte 
+        (name TEXT, email TEXT)""")
+    conn.commit()
+    conn.close()
+
 def get_db():
     conn = sqlite3.connect("kontakte.sqlite")
     conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS Kontakte 
-    (name TEXT, email TEXT)""")
-    conn.commit()
     return conn
 
 class Kontakt(BaseModel):
@@ -16,6 +20,7 @@ class Kontakt(BaseModel):
     email: str
 
 app = FastAPI()
+init_db()
 
 @app.get("/")
 def startseite():
@@ -51,5 +56,14 @@ def kontakt_loeschen(name: str):
     conn.commit()
     conn.close()
     return {"nachricht": f"{name} wurde gelöscht."}
+
+@app.put("/kontakte/{name}")
+def kontakt_updaten(name: str, kontakt: Kontakt):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE Kontakte SET email = ? WHERE name = ?", (kontakt.email, name))
+    conn.commit()
+    conn.close()
+    return {"nachricht": f"{name} wurde aktualisiert! "}
 
 
